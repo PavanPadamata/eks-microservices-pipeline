@@ -13,7 +13,7 @@ ARG AWSCLI_VERSION=2.38.6
 
 USER root
 RUN apt-get update \
- && apt-get install -y --no-install-recommends docker-cli unzip \
+ && apt-get install -y --no-install-recommends docker-cli docker-buildx unzip \
  && rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSLo /usr/local/bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" \
@@ -33,6 +33,7 @@ RUN curl -fsSLo /tmp/awscli.zip "https://awscli.amazonaws.com/awscli-exe-linux-x
  && rm -rf /tmp/aws /tmp/awscli.zip
 
 # The repo is bind-mounted read-only from the host (different owner); let git read it.
+# (ALLOW_LOCAL_CHECKOUT below is the git plugin's opt-in for file:// remotes; fine for a local demo.)
 RUN git config --system --add safe.directory '*'
 
 USER jenkins
@@ -40,4 +41,4 @@ COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
 RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 COPY casc/jenkins.yaml /usr/share/jenkins/casc/jenkins.yaml
 ENV CASC_JENKINS_CONFIG=/usr/share/jenkins/casc/jenkins.yaml \
-    JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
+    JAVA_OPTS="-Djenkins.install.runSetupWizard=false -Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true"
