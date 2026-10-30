@@ -5,7 +5,6 @@ RELEASE       ?= microservices
 NAMESPACE     ?= microservices
 TAG           ?= local
 IMAGE_PREFIX  ?= eks-microservices
-PY_IMAGE      ?= python:3.12.16-slim
 TRAEFIK_CHART_VERSION        ?= 42.1.3
 METRICS_SERVER_CHART_VERSION ?= 3.14.0
 
@@ -20,12 +19,12 @@ LOCAL   := $(ROOT)/infra/local
 help:
 	@grep -hE '^[a-z-]+:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/ -/'
 
-test: ## run unit tests for both services in a python container
+test: ## run unit tests for both services (docker build --target test)
 	@for svc in api worker; do \
 	  echo "== $$svc"; \
-	  docker run --rm -u $$(id -u) -e HOME=/tmp -e PYTHONDONTWRITEBYTECODE=1 \
-	    -v $(ROOT)/services/$$svc:/src -w /src $(PY_IMAGE) \
-	    sh -c "pip install -q --no-cache-dir --no-warn-script-location -r requirements-dev.txt 2>&1 | grep -E '^ERROR'; python -m pytest -q -p no:cacheprovider" || exit 1; \
+	  out=$$(docker build --target test --no-cache-filter test --progress=plain $(ROOT)/services/$$svc 2>&1) \
+	    || { echo "$$out"; echo "TESTS FAILED: $$svc"; exit 1; }; \
+	  echo "$$out" | grep -E ' passed| failed'; \
 	done
 
 lint: ## helm lint with both value overrides
