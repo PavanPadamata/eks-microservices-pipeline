@@ -1,0 +1,16 @@
+# kind: images are loaded with `kind load docker-image`, so nothing is pulled from a registry.
+services:
+  api:
+    image: {tag: local}
+    autoscaling:
+      minReplicas: 1
+      maxReplicas: 5
+      behavior:
+        scaleDown: {stabilizationWindowSeconds: 60}
+  worker:
+    image: {tag: local}
+    autoscaling:
+      minReplicas: 1
+      maxReplicas: 5
+      behavior:
+        scaleDown: {stabilizationWindowSeconds: 60}

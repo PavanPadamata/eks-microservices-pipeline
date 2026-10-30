@@ -1,0 +1,11 @@
+# EKS: images come from ECR. The Jenkins pipeline overrides repository and tag with --set,
+# so no account ID lives in git. The placeholders below only make `helm lint` / `helm template` work.
+services:
+  api:
+    image:
+      repository: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/eks-microservices/api
+      pullPolicy: IfNotPresent
+  worker:
+    image:
+      repository: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/eks-microservices/worker
+      pullPolicy: IfNotPresent
