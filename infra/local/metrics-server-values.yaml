@@ -1,0 +1,4 @@
+# Required for the HPA (CPU metrics). kind's kubelet certs are self-signed, hence the flag.
+# LOCAL ONLY: do not use --kubelet-insecure-tls on a real cluster (EKS does not need it).
+args:
+  - --kubelet-insecure-tls
