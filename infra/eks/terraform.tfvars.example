@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars (gitignored) and adjust.
+region       = "eu-central-1"
+cluster_name = "eks-microservices"
+
+# Restrict the public Kubernetes API endpoint to your own IP:
+api_allowed_cidrs = ["203.0.113.7/32"]
+
+# node_capacity_type = "SPOT"   # cheaper, but nodes may be reclaimed
