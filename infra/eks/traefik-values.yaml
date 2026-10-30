@@ -1,0 +1,11 @@
+# Ingress controller on EKS. ClusterIP on purpose: no cloud load balancer is created, so there is
+# nothing extra to bill and nothing that can block `terraform destroy` (a Service of type LoadBalancer
+# leaves an ELB and ENIs in the VPC that Terraform does not know about).
+# Reach it with `make eks-port-forward`. For a public endpoint you would switch to type LoadBalancer,
+# and `make eks-destroy` refuses to continue while any LoadBalancer Service exists.
+service:
+  type: ClusterIP
+ports:
+  websecure:
+    expose:
+      default: false
