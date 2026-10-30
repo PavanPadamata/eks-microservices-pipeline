@@ -38,3 +38,6 @@ htmlcov/
 .idea/
 .vscode/
 .DS_Store
+
+# Jenkins local secrets (generated kubeconfig)
+jenkins/secrets/

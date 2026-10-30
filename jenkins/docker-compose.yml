@@ -1,0 +1,24 @@
+# Local Jenkins. Requires the kind cluster (`make local-up`) so the external `kind` network exists.
+# SECURITY: the Docker socket is mounted, which is root-equivalent on the host. Local demo only.
+name: jenkins-local
+services:
+  jenkins:
+    build: .
+    image: eks-ms-jenkins:local
+    ports:
+      - "127.0.0.1:8081:8080"      # UI on localhost only
+    environment:
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD:?set JENKINS_ADMIN_PASSWORD in .env}
+    group_add:
+      - "${DOCKER_GID:?set by `make jenkins-up`}"   # lets the jenkins user use the host docker socket
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ..:/repo:ro                                   # pipeline source = your local clone (committed state)
+      - ./secrets/kubeconfig:/run/secrets/kubeconfig:ro
+    networks: [kind]
+networks:
+  kind:
+    external: true
+volumes:
+  jenkins_home:
