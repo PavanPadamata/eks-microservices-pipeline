@@ -5,6 +5,19 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Test stage: `docker build --target test` fails the build if the unit tests fail.
+# Never part of the runtime image; --no-cache-filter test forces the tests to actually run.
+FROM builder AS test-deps
+WORKDIR /srv
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt
+
+FROM test-deps AS test
+COPY pytest.ini .
+COPY app ./app
+COPY tests ./tests
+RUN python -m pytest -q -p no:cacheprovider
+
 # Runtime stage: venv + app only, runs as a numeric non-root user
 FROM python:3.12.16-slim@sha256:8523d6abeb48ceae0b7240d30c5808fc26cb79c1a635bacdf19cf3baecfbec07
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PATH="/opt/venv/bin:$PATH"
