@@ -1,0 +1,40 @@
+# Secrets and environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials
+credentials.*
+.aws/
+
+# Kubernetes / cluster access
+kubeconfig
+kubeconfig*
+*.kubeconfig
+.kube/
+
+# Terraform
+.terraform/
+.terraform.lock.hcl.bak
+*.tfstate
+*.tfstate.*
+crash.log
+*.tfvars
+!*.tfvars.example
+tfplan
+*.tfplan
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
