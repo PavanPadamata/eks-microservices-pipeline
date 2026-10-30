@@ -1,0 +1,61 @@
+# Trimmed for a laptop (kind). Chart version is pinned in monitoring/Makefile.
+# No Alertmanager and no persistence: alerts are visible in Prometheus/Grafana but nothing is
+# notified, and metrics are lost when the Prometheus pod restarts. See README limitations.
+
+alertmanager:
+  enabled: false
+
+nodeExporter:
+  enabled: false          # node-level metrics are not used by the dashboard
+
+# kind runs the control-plane components bound to localhost, so their scrape targets and alerts
+# would be permanently red. Disable them rather than ship noise.
+kubeControllerManager: {enabled: false}
+kubeScheduler: {enabled: false}
+kubeEtcd: {enabled: false}
+kubeProxy: {enabled: false}
+
+defaultRules:
+  rules:
+    alertmanager: false
+    etcd: false
+    kubeControllerManager: false
+    kubeProxy: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    nodeExporterAlerting: false
+    nodeExporterRecording: false
+
+prometheus:
+  prometheusSpec:
+    retention: 6h
+    scrapeInterval: 15s
+    # Pick up ServiceMonitors/PrometheusRules from any namespace without a `release:` label.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests: {cpu: 200m, memory: 400Mi}
+      limits: {memory: 1Gi}
+
+grafana:
+  defaultDashboardsEnabled: false   # only the dashboard in monitoring/dashboards is provisioned
+  # The chart generates a random admin password into a Secret; `make grafana` prints it.
+  # Reach Grafana via port-forward only; this setup does not expose it.
+  sidecar:
+    datasources:
+      alertmanager:
+        enabled: false      # Alertmanager is disabled above, so don't provision a dead datasource
+  resources:             # 256Mi was OOMKilled on startup with Grafana 13
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {memory: 768Mi}
+
+prometheusOperator:
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {memory: 128Mi}
+
+kube-state-metrics:
+  resources:
+    requests: {cpu: 20m, memory: 32Mi}
+    limits: {memory: 96Mi}
