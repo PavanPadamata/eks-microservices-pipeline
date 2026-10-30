@@ -1,0 +1,75 @@
+# Defaults shared by every environment. Per-environment overrides: values-local.yaml, values-eks.yaml.
+
+ingress:
+  enabled: true
+  className: traefik
+  host: ""          # empty matches any host
+  service: api      # key under `services` that receives the traffic; the worker is never exposed
+  annotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+probes:
+  liveness:
+    httpGet: {path: /healthz, port: http}
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readiness:
+    httpGet: {path: /healthz, port: http}
+    initialDelaySeconds: 2
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+
+services:
+  api:
+    image:
+      repository: eks-microservices/api
+      tag: ""             # empty = chart appVersion; the pipeline sets this to the git SHA
+      pullPolicy: IfNotPresent
+    port: 8000
+    replicaCount: 2       # only used when autoscaling is disabled
+    env:
+      WORKER_URL: "http://{{ .Release.Name }}-worker:8000"   # rendered with tpl
+      WORKER_TIMEOUT_S: "2"
+    resources:
+      requests: {cpu: 50m, memory: 64Mi}
+      limits: {cpu: 250m, memory: 128Mi}
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 6
+      targetCPUUtilizationPercentage: 70
+      behavior: {}
+
+  worker:
+    image:
+      repository: eks-microservices/worker
+      tag: ""
+      pullPolicy: IfNotPresent
+    port: 8000
+    replicaCount: 2
+    env:
+      WORK_MS: "20"
+    resources:
+      requests: {cpu: 100m, memory: 64Mi}
+      limits: {cpu: 500m, memory: 128Mi}
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 70
+      behavior: {}
