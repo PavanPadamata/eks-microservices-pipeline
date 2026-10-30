@@ -26,6 +26,10 @@ pipeline {
         RELEASE         = 'microservices'
         NAMESPACE       = 'microservices'
         CHART           = 'charts/microservices'
+        // The first build after the job is (re)created runs before Jenkins has registered the
+        // parameters above, so params.* are empty then. Defaults keep that first run working.
+        TARGET_ENV      = "${params.TARGET ?: 'local'}"
+        KIND_NAME       = "${params.KIND_CLUSTER ?: 'eks-ms'}"
     }
 
     stages {
@@ -34,7 +38,7 @@ pipeline {
                 checkout scm
                 script {
                     env.IMAGE_TAG = sh(returnStdout: true, script: 'git rev-parse --short=8 HEAD').trim()
-                    if (params.TARGET == 'eks') {
+                    if (env.TARGET_ENV == 'eks') {
                         if (!params.ECR_REGISTRY) {
                             error 'ECR_REGISTRY is required when TARGET=eks'
                         }
@@ -42,7 +46,7 @@ pipeline {
                     } else {
                         env.IMAGE_PREFIX = env.IMAGE_NAMESPACE
                     }
-                    echo "target=${params.TARGET} tag=${env.IMAGE_TAG} images=${env.IMAGE_PREFIX}/{api,worker}"
+                    echo "target=${env.TARGET_ENV} tag=${env.IMAGE_TAG} images=${env.IMAGE_PREFIX}/{api,worker}"
                 }
             }
         }
@@ -68,14 +72,14 @@ pipeline {
         }
 
         stage('Load into kind') {
-            when { expression { params.TARGET == 'local' } }
+            when { expression { env.TARGET_ENV == 'local' } }
             steps {
-                sh 'kind load docker-image --name "$KIND_CLUSTER" "$IMAGE_PREFIX/api:$IMAGE_TAG" "$IMAGE_PREFIX/worker:$IMAGE_TAG"'
+                sh 'kind load docker-image --name "$KIND_NAME" "$IMAGE_PREFIX/api:$IMAGE_TAG" "$IMAGE_PREFIX/worker:$IMAGE_TAG"'
             }
         }
 
         stage('Push to ECR') {
-            when { expression { params.TARGET == 'eks' } }
+            when { expression { env.TARGET_ENV == 'eks' } }
             steps {
                 withAws {
                     // single-quoted: the shell expands the secrets, Groovy never sees them
@@ -93,7 +97,7 @@ pipeline {
 
         stage('Helm lint') {
             steps {
-                sh 'helm lint "$CHART" -f "$CHART/values-${TARGET}.yaml"'
+                sh 'helm lint "$CHART" -f "$CHART/values-${TARGET_ENV}.yaml"'
             }
         }
 
@@ -103,7 +107,7 @@ pipeline {
                     sh '''
                         helm upgrade --install "$RELEASE" "$CHART" \
                           --namespace "$NAMESPACE" --create-namespace \
-                          -f "$CHART/values-${TARGET}.yaml" \
+                          -f "$CHART/values-${TARGET_ENV}.yaml" \
                           --set services.api.image.repository="$IMAGE_PREFIX/api" \
                           --set services.api.image.tag="$IMAGE_TAG" \
                           --set services.worker.image.repository="$IMAGE_PREFIX/worker" \
@@ -131,7 +135,7 @@ print('smoke ok', r)"
     }
 
     post {
-        success { echo "Deployed ${env.IMAGE_TAG} to ${params.TARGET}" }
+        success { echo "Deployed ${env.IMAGE_TAG} to ${env.TARGET_ENV}" }
         failure { echo 'Pipeline failed; see the failing stage above.' }
     }
 }
@@ -147,7 +151,7 @@ def withAws(Closure body) {
 
 // Sets KUBECONFIG for the target cluster for the duration of the closure.
 def withCluster(Closure body) {
-    if (params.TARGET == 'local') {
+    if (env.TARGET_ENV == 'local') {
         withCredentials([file(credentialsId: 'kind-kubeconfig', variable: 'KUBECONFIG')]) {
             body()
         }
