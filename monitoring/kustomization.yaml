@@ -1,0 +1,13 @@
+# kubectl apply -k monitoring/   (after the kube-prometheus-stack CRDs exist)
+namespace: monitoring
+resources:
+  - servicemonitor.yaml
+  - prometheusrule.yaml
+configMapGenerator:
+  - name: microservices-dashboard
+    files:
+      - microservices.json=dashboards/microservices.json
+    options:
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"      # picked up by the Grafana sidecar
