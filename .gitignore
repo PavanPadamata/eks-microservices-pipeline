@@ -41,3 +41,6 @@ htmlcov/
 
 # Jenkins local secrets (generated kubeconfig)
 jenkins/secrets/
+
+# Load test output (measured locally; copy numbers into the README by hand)
+infra/local/loadtest/results/

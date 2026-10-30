@@ -15,7 +15,13 @@ HELM    := helm --kube-context $(KCTX)
 CHART   := $(ROOT)/charts/microservices
 LOCAL   := $(ROOT)/infra/local
 
-.PHONY: help test lint local-up build load deploy status local-down
+# Load test knobs (override on the command line, e.g. `make load-test LOAD_RATE=60`)
+LOAD_RATE       ?= 40
+LOAD_DURATION_S ?= 240
+LOAD_COOLDOWN_S ?= 180
+LOADTEST_ENV     = KCTX=$(KCTX) NAMESPACE=$(NAMESPACE) RELEASE=$(RELEASE)
+
+.PHONY: help test lint local-up build load deploy status load-baseline load-test local-down
 help:
 	@grep -hE '^[a-z-]+:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/ -/'
 
@@ -57,6 +63,12 @@ deploy: load ## helm upgrade --install the chart on kind
 
 status: ## pods, HPAs and ingress
 	$(KUBECTL) -n $(NAMESPACE) get pods,hpa,ingress
+
+load-baseline: ## 60 s at 2 req/s: latency before load (needs `make deploy`)
+	$(LOADTEST_ENV) LABEL=baseline RATE=2 DURATION_S=60 COOLDOWN_S=0 $(LOCAL)/loadtest/run.sh
+
+load-test: ## k6 load through the ingress while recording HPA replicas (see README for what to read)
+	$(LOADTEST_ENV) LABEL=load RATE=$(LOAD_RATE) DURATION_S=$(LOAD_DURATION_S) COOLDOWN_S=$(LOAD_COOLDOWN_S) $(LOCAL)/loadtest/run.sh
 
 local-down: ## delete the kind cluster
 	kind delete cluster --name $(CLUSTER)
