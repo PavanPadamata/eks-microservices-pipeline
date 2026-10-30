@@ -1,0 +1,21 @@
+# One ServiceMonitor for both services: selects the chart's Services by label and scrapes the
+# named port `http` on /metrics. The `service` label (api / worker) is copied from the Service.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: microservices
+  labels:
+    app.kubernetes.io/part-of: microservices
+spec:
+  namespaceSelector:
+    matchNames: [microservices]
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: microservices
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_service_label_app_kubernetes_io_name]
+          targetLabel: service
